@@ -1,7 +1,7 @@
 package com.consumer.listener;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +28,9 @@ public class StreamConsumer implements StreamListener<String, ObjectRecord<Strin
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
 
+    @Getter
+    private final String consumerId = UUID.randomUUID().toString();
+
     @Override
     public void onMessage(ObjectRecord<String, String> message) {
         Map<String, String> valueMap;
@@ -38,7 +41,7 @@ public class StreamConsumer implements StreamListener<String, ObjectRecord<Strin
             return;
         }
 
-        valueMap.put("randomId", UUID.randomUUID().toString());
+        valueMap.put("consumerId", consumerId);
 
         redisTemplate.opsForStream().add(StreamRecords.mapBacked(valueMap).withStreamKey(outputStreamKey));
     }

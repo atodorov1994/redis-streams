@@ -1,5 +1,6 @@
 package com.consumer.config;
 
+import com.consumer.listener.StreamConsumer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -11,17 +12,14 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.data.redis.RedisSystemException;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.stream.Consumer;
-import org.springframework.data.redis.connection.stream.ObjectRecord;
 import org.springframework.data.redis.connection.stream.ReadOffset;
 import org.springframework.data.redis.connection.stream.StreamOffset;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.stream.StreamListener;
 import org.springframework.data.redis.stream.StreamMessageListenerContainer;
 import org.springframework.data.redis.stream.Subscription;
 
 import java.time.Duration;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -60,9 +58,8 @@ public class AppConfig {
 
     @Bean
     @Scope(scopeName = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
-    public ConsumerSubscription streamMessageSubscription(StreamListener<String, ObjectRecord<String, String>> streamListener) {
+    public ConsumerSubscription streamMessageSubscription(StreamConsumer streamListener) {
 
-        var consumerId = UUID.randomUUID().toString();
         var options = StreamMessageListenerContainer
                 .StreamMessageListenerContainerOptions.builder()
                 .pollTimeout(Duration.ofMillis(100))
@@ -74,13 +71,13 @@ public class AppConfig {
                 .create(connectionFactory, options);
 
         var subscription = listenerContainer.receiveAutoAck(
-                Consumer.from(consumerGroupName, consumerId),
+                Consumer.from(consumerGroupName, streamListener.getConsumerId()),
                 StreamOffset.create(messageTopicName, ReadOffset.lastConsumed()),
                 streamListener
         );
 
         listenerContainer.start();
-        return new ConsumerSubscription(consumerId, subscription);
+        return new ConsumerSubscription(streamListener.getConsumerId(), subscription);
     }
 
     @Bean
