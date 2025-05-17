@@ -50,7 +50,7 @@ public class MessageSubscriber implements MessageListener {
             Boolean acquired = redisTemplate.opsForValue().setIfAbsent(
                     lockKey,
                     appName,
-                    java.time.Duration.ofSeconds(5)
+                    java.time.Duration.ofSeconds(15)
             );
 
             if (Boolean.TRUE.equals(acquired)) {
@@ -58,7 +58,6 @@ public class MessageSubscriber implements MessageListener {
                 if (!offered) {
                     log.warn("Buffer full! Dropping message with ID: {}", messageId);
                 }
-                redisTemplate.expire(lockKey, Duration.ZERO);
             } else {
                 log.debug("Lock exists for message_id {}, skipping", messageId);
             }
