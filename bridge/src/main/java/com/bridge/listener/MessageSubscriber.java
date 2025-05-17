@@ -1,5 +1,6 @@
 package com.bridge.listener;
 
+import com.bridge.service.LockService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
@@ -11,11 +12,9 @@ import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
@@ -28,8 +27,8 @@ public class MessageSubscriber implements MessageListener {
     @Qualifier("bufferContainer")
     private final List<BlockingQueue<String>> bufferContainer;
     private final BlockingQueue<String> buffer;
-    private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
+    private final LockService lockService;
 
     @PostConstruct
     public void init() {
@@ -46,14 +45,7 @@ public class MessageSubscriber implements MessageListener {
             JsonNode node = objectMapper.readTree(body);
             String messageId = node.get("message_id").asText();
 
-            String lockKey = "bridge:lock:" + messageId;
-            Boolean acquired = redisTemplate.opsForValue().setIfAbsent(
-                    lockKey,
-                    appName,
-                    java.time.Duration.ofSeconds(15)
-            );
-
-            if (Boolean.TRUE.equals(acquired)) {
+            if (lockService.tryLock(messageId)) {
                 boolean offered = buffer.offer(body);
                 if (!offered) {
                     log.warn("Buffer full! Dropping message with ID: {}", messageId);
@@ -62,7 +54,7 @@ public class MessageSubscriber implements MessageListener {
                 log.debug("Lock exists for message_id {}, skipping", messageId);
             }
         } catch (Exception e) {
-            log.warn("Failed to process incoming message: {}", e.getMessage());
+            log.warn("Failed to process incoming message", e);
         }
     }
 }
