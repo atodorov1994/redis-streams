@@ -2,20 +2,25 @@ package com.consumer.listener;
 
 import com.consumer.config.AppConfig;
 import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.SmartLifecycle;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.stream.Subscription;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
-public class SubscriptionManager {
+public class SubscriptionManager implements SmartLifecycle {
+
+    private boolean isRunning = false;
 
     @Value("${redis.consumer-group.size}")
     private int consumerGroupSize;
@@ -34,14 +39,6 @@ public class SubscriptionManager {
         for (int i = 0; i < consumerGroupSize; i++) {
             registerSubscription();
         }
-    }
-
-    @PreDestroy
-    public void cleanup() {
-        for (String subscriptionId : activeSubscriptions.keySet()) {
-            redisTemplate.opsForList().remove(activeSubscriptionKey, 1, subscriptionId);
-        }
-        activeSubscriptions.clear();
     }
 
     @Scheduled(fixedDelay = 10_000)
@@ -63,5 +60,25 @@ public class SubscriptionManager {
         var subscription = context.getBean("streamMessageSubscription", AppConfig.ConsumerSubscription.class);
         activeSubscriptions.put(subscription.id(), subscription.subscription());
         redisTemplate.opsForList().rightPush(activeSubscriptionKey, subscription.id());
+    }
+
+    @Override
+    public void start() {
+        isRunning = true;
+    }
+
+    @Override
+    public void stop() {
+        for (String subscriptionId : activeSubscriptions.keySet()) {
+            redisTemplate.opsForList().remove(activeSubscriptionKey, 1, subscriptionId);
+        }
+        activeSubscriptions.clear();
+
+        isRunning = false;
+    }
+
+    @Override
+    public boolean isRunning() {
+        return isRunning;
     }
 }
