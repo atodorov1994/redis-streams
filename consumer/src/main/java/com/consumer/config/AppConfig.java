@@ -1,5 +1,6 @@
 package com.consumer.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,7 +29,7 @@ import java.util.concurrent.Executors;
 @RequiredArgsConstructor
 public class AppConfig {
 
-    @Value("${redis.topic}")
+    @Value("${redis.stream.key}")
     private String messageTopicName;
 
     @Value("${redis.consumer-group.id}")
@@ -36,6 +37,8 @@ public class AppConfig {
 
     private final RedisConnectionFactory connectionFactory;
     private final RedisTemplate<String, String> redisTemplate;
+
+    public record ConsumerSubscription(String id, Subscription subscription) {}
 
     @PostConstruct
     public void ensureStreamAndGroup() {
@@ -57,7 +60,7 @@ public class AppConfig {
 
     @Bean
     @Scope(scopeName = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
-    public Subscription streamMessageSubscription(StreamListener<String, ObjectRecord<String, String>> streamListener) {
+    public ConsumerSubscription streamMessageSubscription(StreamListener<String, ObjectRecord<String, String>> streamListener) {
 
         var consumerId = UUID.randomUUID().toString();
         var options = StreamMessageListenerContainer
@@ -77,6 +80,11 @@ public class AppConfig {
         );
 
         listenerContainer.start();
-        return subscription;
+        return new ConsumerSubscription(consumerId, subscription);
+    }
+
+    @Bean
+    public ObjectMapper objectMapper() {
+        return new ObjectMapper();
     }
 }
