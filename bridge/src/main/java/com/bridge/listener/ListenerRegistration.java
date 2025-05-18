@@ -26,6 +26,11 @@ public class ListenerRegistration {
 
     List<MessageSubscriber> activeSubscriptions = new ArrayList<>();
 
+    /**
+     * Registers and starts multiple Redis message listeners.
+     * Each listener is a prototype-scoped bean.
+     * The number of listeners created is determined by {@link #bridgeGroupSize}.
+     */
     @PostConstruct
     public void registerListeners() {
 

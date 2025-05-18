@@ -9,6 +9,15 @@ import java.util.concurrent.ConcurrentMap;
 
 import static com.bridge.config.Constants.LOCK_TTL_MS;
 
+
+/**
+ * A simple in-memory lock mechanism to deduplicate messages using their message ID.
+ * Each message ID is stored with a timestamp to track when it was first seen.
+ * Old entries are periodically cleaned up to prevent memory leaks.
+ * If we want to make the application scale horizontally
+ * the only thing we need to do is implement a distributed lock here
+ * But beware - the efficiency drops with redis distributed synchronisation
+ */
 @Component
 @RequiredArgsConstructor
 public class LockService {

@@ -23,11 +23,21 @@ import java.util.concurrent.Executors;
 
 import static com.bridge.config.Constants.BATCH_DRAIN_RATE_MS;
 
+/**
+ * Component responsible for draining in-memory message buffers and publishing them
+ * to Redis Streams in batches using pipelined execution.
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class BatchEmitter {
 
+    /**
+       Container that stores all the buffers.
+       Each listener register his own prototype buffer bean
+       Each listener register his own prototype buffer bean
+       The number of listeners depends on {@link #bridgeGroupSize}
+     */
     @Qualifier("bufferContainer")
     private final List<BlockingQueue<String>> bufferContainer;
     private final RedisTemplate<String, String> redisTemplate;
@@ -46,6 +56,8 @@ public class BatchEmitter {
         executorService = Executors.newFixedThreadPool(bridgeGroupSize);
     }
 
+
+    // Job that drains the buffers in parallel
     @Scheduled(fixedDelay = BATCH_DRAIN_RATE_MS)
     public void drainBuffers() {
         bufferContainer.forEach(que -> executorService.submit(() -> flushBufferToStream(que)));

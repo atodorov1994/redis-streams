@@ -13,9 +13,11 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.data.redis.RedisSystemException;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.stream.Consumer;
+import org.springframework.data.redis.connection.stream.ObjectRecord;
 import org.springframework.data.redis.connection.stream.ReadOffset;
 import org.springframework.data.redis.connection.stream.StreamOffset;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.stream.StreamListener;
 import org.springframework.data.redis.stream.StreamMessageListenerContainer;
 import org.springframework.data.redis.stream.Subscription;
 
@@ -45,6 +47,11 @@ public class AppConfig {
 
     public record ConsumerSubscription(String id, Subscription subscription) {}
 
+    /**
+     * Ensures the Redis stream and its consumer group exist.
+     * If the stream does not exist, it will be created with a dummy message.
+     * If the consumer group already exists, it skips creation.
+     */
     @PostConstruct
     public void ensureStreamAndGroup() {
         try {
@@ -64,6 +71,16 @@ public class AppConfig {
         return Executors.newFixedThreadPool(numberOfThreads);
     }
 
+    /**
+     * Creates a prototype-scoped bean for a Redis Stream consumer subscription,
+     * that is a specific implementation of {@link StreamListener <String,  ObjectRecord <String,String>>}
+     * I am using the implementation instead the interface, because i need the consumer id
+     * This sets up a StreamMessageListenerContainer with a dedicated consumer instance
+     * and returns a handle to manage the subscription.
+     *
+     * @param streamListener the listener instance for handling messages
+     * @return a ConsumerSubscription representing the active stream consumer
+     */
     @Bean(SUBSCRIPTION_BEAN_NAME)
     @Scope(scopeName = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
     public ConsumerSubscription streamMessageSubscription(StreamConsumer streamListener) {

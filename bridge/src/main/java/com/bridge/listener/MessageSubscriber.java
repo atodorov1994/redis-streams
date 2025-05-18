@@ -37,6 +37,11 @@ public class MessageSubscriber implements MessageListener {
         bufferContainer.add(buffer);
     }
 
+    /**
+     * Handles incoming messages from Redis Pub/Sub channel.
+     * @param message message must not be {@literal null}.
+     * @param pattern pattern matching the channel (if specified) - can be {@literal null}.
+     */
     @Override
     public void onMessage(Message message, byte[] pattern) {
         try {
@@ -44,6 +49,10 @@ public class MessageSubscriber implements MessageListener {
             JsonNode node = objectMapper.readTree(body);
             String messageId = node.get("message_id").asText();
 
+            // Acquires lock for this message ID
+            // This way multiple subscribers can work together
+            // Important: the order of messages is not guaranteed
+            // Important: the lock is implemented in-memory
             if (lockService.tryLock(messageId)) {
                 boolean offered = buffer.offer(body);
                 if (!offered) {

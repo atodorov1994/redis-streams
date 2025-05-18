@@ -13,6 +13,10 @@ import java.util.List;
 
 import static com.consumer.config.Constants.METRICS_RATE_MS;
 
+/**
+ * Tracks and reports throughput metrics based on the Redis output stream size.
+ * Logs periodic updates and calculates an average throughput at shutdown.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -20,6 +24,7 @@ public class MetricsService {
 
     private final RedisTemplate<String, String> redisTemplate;
 
+    // Stores deltas of processed message counts between polling intervals
     private final List<Long> processed = new ArrayList<>();
 
     @Value("${redis.output.stream.key}")
@@ -27,6 +32,10 @@ public class MetricsService {
 
     private long lastCount = 0;
 
+    /**
+     * Scheduled task to report throughput by polling the size of the output stream.
+     * Runs every METRICS_RATE_MS milliseconds.
+     */
     @Scheduled(fixedRate = METRICS_RATE_MS)
     public void reportThroughput() {
         Long currentCount = redisTemplate.opsForStream().size(processedStreamKey);
@@ -45,6 +54,10 @@ public class MetricsService {
         }
     }
 
+    /**
+     * Calculates and logs the average throughput across the lifetime of the service.
+     * Called automatically before shutdown.
+     */
     @PreDestroy
     public void calculateAvrg() {
         var avrg = processed.stream().reduce(0L, Long::sum) / processed.size();

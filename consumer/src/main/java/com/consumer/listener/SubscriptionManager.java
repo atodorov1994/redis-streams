@@ -17,7 +17,15 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.consumer.config.Constants.SUBSCRIPTION_BEAN_NAME;
+import static com.consumer.config.Constants.SUBSCRIPTION_CHECK_RATE_MS;
 
+/**
+ * Manages Redis Stream consumer subscriptions.
+ * - Automatically registers a fixed number of stream consumers at startup.
+ * - Monitors and restarts inactive subscriptions on a scheduled basis.
+ * - Implements SmartLifecycle for clean startup and shutdown
+ *   and to execute a cleanUp logic on the activeSubscriptions RedisList
+ */
 @Component
 @RequiredArgsConstructor
 public class SubscriptionManager implements SmartLifecycle {
@@ -43,7 +51,11 @@ public class SubscriptionManager implements SmartLifecycle {
         }
     }
 
-    @Scheduled(fixedRate = 10_000)
+    /**
+     * Periodically checks for inactive subscriptions and replaces them.
+     * Runs every 10 seconds.
+     */
+    @Scheduled(fixedRate = SUBSCRIPTION_CHECK_RATE_MS)
     public void checkSubscriptionActivity() {
         Set<String> inactiveSubs = new HashSet<>();
         activeSubscriptions.forEach((id, subscription) -> {
@@ -58,11 +70,17 @@ public class SubscriptionManager implements SmartLifecycle {
         }
     }
 
+    /**
+     * Registers a new consumer subscription and stores it both in memory and Redis.
+     */
     private void registerSubscription() {
         var subscription = context.getBean(SUBSCRIPTION_BEAN_NAME, AppConfig.ConsumerSubscription.class);
         activeSubscriptions.put(subscription.id(), subscription.subscription());
         redisTemplate.opsForList().rightPush(activeSubscriptionKey, subscription.id());
     }
+
+
+    // SmartLifecycle lifecycle management methods
 
     @Override
     public void start() {

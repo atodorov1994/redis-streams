@@ -15,6 +15,10 @@ public class RedisMessagePublisher implements MessagePublisher {
     private final RedisTemplate<String, String> redisTemplate;
     private final ChannelTopic topic;
 
+    /**
+     * Publishes a batch of messages to a Redis Pub/Sub channel using pipelining for efficiency.
+     * @param messages the list of messages to publish (must not be null)
+     */
     @Override
     public void publishBatch(List<String> messages) {
         redisTemplate.executePipelined((RedisCallback<Object>) connection -> {

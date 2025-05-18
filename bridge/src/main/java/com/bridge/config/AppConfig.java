@@ -43,6 +43,12 @@ public class AppConfig {
     @Value("${redis.batch-buffer-size}")
     private int bufferSize;
 
+
+    /**
+     * Ensures the Redis stream and its consumer group exist.
+     * If the stream does not exist, it will be created with a dummy message.
+     * If the consumer group already exists, it skips creation.
+     */
     @PostConstruct
     public void ensureStreamAndGroup() {
         try {

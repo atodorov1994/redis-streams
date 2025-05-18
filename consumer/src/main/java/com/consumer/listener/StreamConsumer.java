@@ -18,6 +18,10 @@ import java.util.UUID;
 
 import static com.consumer.config.Constants.CONSUMER_BEAN_NAME;
 
+/**
+ * Prototype-scoped Redis Stream consumer that processes incoming records
+ * and writes processed data to another Redis Stream.
+ */
 @Service(CONSUMER_BEAN_NAME)
 @Scope(scopeName = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 @RequiredArgsConstructor

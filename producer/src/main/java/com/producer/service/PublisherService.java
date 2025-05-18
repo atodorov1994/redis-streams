@@ -14,6 +14,11 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
+/**
+ * Periodically publishes batches of messages to Redis using the {@link RedisMessagePublisher}.
+ * Message generation runs for a configured duration, with configurable throttling
+ * between each batch to simulate a realistic message flow.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -33,6 +38,12 @@ public class PublisherService {
     @Value("${redis.publish-duration-sec}")
     private int publishDurationSec;
 
+    /**
+     * Starts publishing batches of messages after application startup.
+     * Each batch contains randomly generated UUID-based message IDs.
+     * Publishing is throttled with a random delay between batches.
+     * Publishing continues for configurable duration
+     */
     @PostConstruct
     public void startPublishingMessages() throws InterruptedException {
 
