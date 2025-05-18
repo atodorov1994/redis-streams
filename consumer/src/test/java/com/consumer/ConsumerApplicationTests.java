@@ -54,7 +54,7 @@ class ConsumerApplicationTests {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("spring.data.redis.host", redisContainer::getHost);
-        registry.add("spring.data.port", () -> redisContainer.getMappedPort(6379));
+        registry.add("spring.data.redis.port", () -> redisContainer.getMappedPort(6379));
     }
 
     @Test
