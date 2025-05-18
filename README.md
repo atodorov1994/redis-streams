@@ -45,6 +45,7 @@ one idle instance, that can continue the processing if the leader crashes.
 - Java 17
 - Maven 3.6+
 - Redis server
+- Docker Environment (for tests)
 
 ### Running Services
 ```
