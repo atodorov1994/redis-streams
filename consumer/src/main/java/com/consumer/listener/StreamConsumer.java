@@ -16,17 +16,19 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 import java.util.UUID;
 
-@Service("streamMessageConsumer")
+import static com.consumer.config.Constants.CONSUMER_BEAN_NAME;
+
+@Service(CONSUMER_BEAN_NAME)
 @Scope(scopeName = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 @RequiredArgsConstructor
 @Slf4j
 public class StreamConsumer implements StreamListener<String, ObjectRecord<String,String>> {
 
-    @Value("${redis.output.stream.key}")
-    private String outputStreamKey;
-
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
+
+    @Value("${redis.output.stream.key}")
+    private String outputStreamKey;
 
     @Getter
     private final String consumerId = UUID.randomUUID().toString();

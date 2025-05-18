@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.bridge.config.Constants.LISTENER_BEAN_NAME;
+
 @Component
 @RequiredArgsConstructor
 public class ListenerRegistration {
@@ -28,7 +30,7 @@ public class ListenerRegistration {
     public void registerListeners() {
 
         for (int i = 0; i < bridgeGroupSize; i++) {
-            var listener = context.getBean("messageListener", MessageSubscriber.class);
+            var listener = context.getBean(LISTENER_BEAN_NAME, MessageSubscriber.class);
             activeSubscriptions.add(listener);
             messageListenerContainer.addMessageListener(listener, topic);
         }

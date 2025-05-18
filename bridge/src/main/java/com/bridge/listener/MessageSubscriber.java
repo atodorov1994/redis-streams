@@ -7,7 +7,6 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.data.redis.connection.Message;
@@ -18,13 +17,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
-@Service("messageListener")
+import static com.bridge.config.Constants.BUFFER_CONTAINER_BEAN_NAME;
+import static com.bridge.config.Constants.LISTENER_BEAN_NAME;
+
+@Service(LISTENER_BEAN_NAME)
 @Scope(scopeName = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 @RequiredArgsConstructor
 @Slf4j
 public class MessageSubscriber implements MessageListener {
 
-    @Qualifier("bufferContainer")
+    @Qualifier(BUFFER_CONTAINER_BEAN_NAME)
     private final List<BlockingQueue<String>> bufferContainer;
     private final BlockingQueue<String> buffer;
     private final ObjectMapper objectMapper;
@@ -34,9 +36,6 @@ public class MessageSubscriber implements MessageListener {
     public void init() {
         bufferContainer.add(buffer);
     }
-
-    @Value("spring.application.name")
-    private String appName;
 
     @Override
     public void onMessage(Message message, byte[] pattern) {

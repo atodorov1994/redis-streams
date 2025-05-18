@@ -21,18 +21,24 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static com.bridge.config.Constants.BATCH_DRAIN_RATE_MS;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class BatchEmitter {
 
-    @Value("${redis.bridge-group.size}")
-    private int bridgeGroupSize;
-
     @Qualifier("bufferContainer")
     private final List<BlockingQueue<String>> bufferContainer;
     private final RedisTemplate<String, String> redisTemplate;
     private final ChannelTopic topic;
+
+    @Value("${redis.bridge-group.size}")
+    private int bridgeGroupSize;
+
+    @Value("${redis.batch-drain-size}")
+    private int batchDrainSize;
+
     private ExecutorService executorService;
 
     @PostConstruct
@@ -40,14 +46,14 @@ public class BatchEmitter {
         executorService = Executors.newFixedThreadPool(bridgeGroupSize);
     }
 
-    @Scheduled(fixedDelay = 100)
+    @Scheduled(fixedDelay = BATCH_DRAIN_RATE_MS)
     public void drainBuffers() {
         bufferContainer.forEach(que -> executorService.submit(() -> flushBufferToStream(que)));
     }
 
     private void flushBufferToStream(BlockingQueue<String> buffer) {
         List<String> batch = new ArrayList<>();
-        buffer.drainTo(batch, 1000);
+        buffer.drainTo(batch, batchDrainSize);
 
         if (batch.isEmpty()) return;
 

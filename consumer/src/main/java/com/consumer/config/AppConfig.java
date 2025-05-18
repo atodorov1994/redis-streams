@@ -4,6 +4,7 @@ import com.consumer.listener.StreamConsumer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Bean;
@@ -23,9 +24,15 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static com.consumer.config.Constants.SUBSCRIPTION_BEAN_NAME;
+
 @Configuration
 @RequiredArgsConstructor
+@Slf4j
 public class AppConfig {
+
+    private final RedisConnectionFactory connectionFactory;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Value("${redis.stream.key}")
     private String messageTopicName;
@@ -33,8 +40,8 @@ public class AppConfig {
     @Value("${redis.consumer-group.id}")
     private String consumerGroupName;
 
-    private final RedisConnectionFactory connectionFactory;
-    private final RedisTemplate<String, String> redisTemplate;
+    @Value("${redis.poll-timeout.ms}")
+    private int pollTimeoutMs;
 
     public record ConsumerSubscription(String id, Subscription subscription) {}
 
@@ -45,8 +52,9 @@ public class AppConfig {
             redisTemplate.opsForStream().createGroup(messageTopicName, ReadOffset.from("0"), consumerGroupName);
         } catch (RedisSystemException e) {
             if (!e.getMessage().contains("BUSYGROUP")) {
-                System.out.println("Consumer group exists.");
+                log.info("Consumer group exists.");
             }
+            log.error("Error ensuring stream creation", e);
         }
     }
 
@@ -56,13 +64,13 @@ public class AppConfig {
         return Executors.newFixedThreadPool(numberOfThreads);
     }
 
-    @Bean
+    @Bean(SUBSCRIPTION_BEAN_NAME)
     @Scope(scopeName = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
     public ConsumerSubscription streamMessageSubscription(StreamConsumer streamListener) {
 
         var options = StreamMessageListenerContainer
                 .StreamMessageListenerContainerOptions.builder()
-                .pollTimeout(Duration.ofMillis(100))
+                .pollTimeout(Duration.ofMillis(pollTimeoutMs))
                 .targetType(String.class)
                 .executor(executorService())
                 .build();

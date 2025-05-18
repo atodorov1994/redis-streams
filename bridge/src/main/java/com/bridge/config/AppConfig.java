@@ -3,6 +3,7 @@ package com.bridge.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Bean;
@@ -23,9 +24,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import static com.bridge.config.Constants.BUFFER_CONTAINER_BEAN_NAME;
+
 @Configuration
 @RequiredArgsConstructor
+@Slf4j
 public class AppConfig {
+
+    private final RedisConnectionFactory connectionFactory;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Value("${redis.topic}")
     private String messageTopicName;
@@ -33,8 +40,8 @@ public class AppConfig {
     @Value("${redis.consumer-group.id}")
     private String consumerGroupName;
 
-    private final RedisConnectionFactory connectionFactory;
-    private final RedisTemplate<String, String> redisTemplate;
+    @Value("${redis.batch-buffer-size}")
+    private int bufferSize;
 
     @PostConstruct
     public void ensureStreamAndGroup() {
@@ -43,8 +50,9 @@ public class AppConfig {
             redisTemplate.opsForStream().createGroup(messageTopicName, ReadOffset.from("0"), consumerGroupName);
         } catch (RedisSystemException e) {
             if (!e.getMessage().contains("BUSYGROUP")) {
-                System.out.println("Consumer group exists.");
+                log.info("Consumer group exists.");
             }
+            log.error("Error ensuring stream creation", e);
         }
     }
 
@@ -70,10 +78,10 @@ public class AppConfig {
     @Bean
     @Scope(scopeName = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
     BlockingQueue<String> buffer() {
-        return new LinkedBlockingQueue<>(10000);
+        return new LinkedBlockingQueue<>(bufferSize);
     }
 
-    @Bean("bufferContainer")
+    @Bean(BUFFER_CONTAINER_BEAN_NAME)
     List<BlockingQueue<String>> bufferContainer() {
         return new ArrayList<>();
     }

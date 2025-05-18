@@ -16,11 +16,14 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import static com.consumer.config.Constants.SUBSCRIPTION_BEAN_NAME;
+
 @Component
 @RequiredArgsConstructor
 public class SubscriptionManager implements SmartLifecycle {
 
-    private boolean isRunning = false;
+    private final ApplicationContext context;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Value("${redis.consumer-group.size}")
     private int consumerGroupSize;
@@ -28,10 +31,9 @@ public class SubscriptionManager implements SmartLifecycle {
     @Value("${redis.active-subscription-key}")
     private String activeSubscriptionKey;
 
-    private final ApplicationContext context;
-    private final RedisTemplate<String, String> redisTemplate;
-
     Map<String, Subscription> activeSubscriptions = new HashMap<>();
+
+    private boolean isRunning = false;
 
     @PostConstruct
     public void registerConsumers() {
@@ -41,7 +43,7 @@ public class SubscriptionManager implements SmartLifecycle {
         }
     }
 
-    @Scheduled(fixedDelay = 10_000)
+    @Scheduled(fixedRate = 10_000)
     public void checkSubscriptionActivity() {
         Set<String> inactiveSubs = new HashSet<>();
         activeSubscriptions.forEach((id, subscription) -> {
@@ -57,7 +59,7 @@ public class SubscriptionManager implements SmartLifecycle {
     }
 
     private void registerSubscription() {
-        var subscription = context.getBean("streamMessageSubscription", AppConfig.ConsumerSubscription.class);
+        var subscription = context.getBean(SUBSCRIPTION_BEAN_NAME, AppConfig.ConsumerSubscription.class);
         activeSubscriptions.put(subscription.id(), subscription.subscription());
         redisTemplate.opsForList().rightPush(activeSubscriptionKey, subscription.id());
     }

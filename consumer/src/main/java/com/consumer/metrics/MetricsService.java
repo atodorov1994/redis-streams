@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.consumer.config.Constants.METRICS_RATE_MS;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -18,14 +20,14 @@ public class MetricsService {
 
     private final RedisTemplate<String, String> redisTemplate;
 
-    private List<Long> processed = new ArrayList<>();
+    private final List<Long> processed = new ArrayList<>();
 
     @Value("${redis.output.stream.key}")
     private String processedStreamKey;
 
     private long lastCount = 0;
 
-    @Scheduled(fixedRate = 3000)
+    @Scheduled(fixedRate = METRICS_RATE_MS)
     public void reportThroughput() {
         Long currentCount = redisTemplate.opsForStream().size(processedStreamKey);
 

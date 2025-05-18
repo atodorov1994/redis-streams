@@ -3,6 +3,8 @@ package com.producer.service;
 import com.producer.publisher.RedisMessagePublisher;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -14,36 +16,47 @@ import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PublisherService {
 
     private final RedisMessagePublisher publisher;
 
-    private final int BATCH_SIZE = 1000;
-    private final Duration TARGET_DURATION = Duration.ofMinutes(1);
+    @Value("${redis.batch-size}")
+    private int batchSize;
+
+    @Value("${redis.throttle-min-ms}")
+    private int throttleMinMs;
+
+    @Value("${redis.throttle-max-ms}")
+    private int throttleMaxMs;
+
+    @Value("${redis.publish-duration-sec}")
+    private int publishDurationSec;
 
     @PostConstruct
     public void startPublishingMessages() throws InterruptedException {
 
+        Duration targetDuration = Duration.ofSeconds(publishDurationSec);
+
         Instant start = Instant.now();
         int totalMessages = 0;
 
-        while (Duration.between(start, Instant.now()).compareTo(TARGET_DURATION) < 0) {
+        while (Duration.between(start, Instant.now()).compareTo(targetDuration) < 0) {
 
             List<String> messages = new ArrayList<>();
 
-            for (int i = 0; i < BATCH_SIZE; i++) {
+            for (int i = 0; i < batchSize; i++) {
                 messages.add(String.format("{\"message_id\":\"%s\"}", UUID.randomUUID()));
             }
 
             publisher.publishBatch(messages);
 
-            totalMessages += BATCH_SIZE;
+            totalMessages += batchSize;
 
-            // Sleep randomly between 100ms and 500ms
-            long sleepMillis = ThreadLocalRandom.current().nextLong(100, 501);
+            long sleepMillis = ThreadLocalRandom.current().nextLong(throttleMinMs, throttleMaxMs);
             Thread.sleep(sleepMillis);
         }
 
-        System.out.println("Total messages published: " + totalMessages);
+        log.info("Total messages published: {}", totalMessages);
     }
 }
