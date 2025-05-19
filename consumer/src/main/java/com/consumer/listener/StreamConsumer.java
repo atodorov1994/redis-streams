@@ -1,6 +1,7 @@
 package com.consumer.listener;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +43,9 @@ public class StreamConsumer implements StreamListener<String, ObjectRecord<Strin
         Map<String, String> valueMap;
         try {
             valueMap = objectMapper.readValue(message.getValue(), Map.class);
+        } catch (MismatchedInputException e) {
+            log.debug("Init message", e);
+            return;
         } catch (Exception e) {
             log.warn("Error processing message", e);
             return;

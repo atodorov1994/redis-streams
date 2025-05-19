@@ -55,8 +55,9 @@ public class AppConfig {
             redisTemplate.opsForStream().add(messageTopicName, Map.of("init", "true"));
             redisTemplate.opsForStream().createGroup(messageTopicName, ReadOffset.from("0"), consumerGroupName);
         } catch (RedisSystemException e) {
-            if (!e.getMessage().contains("BUSYGROUP")) {
+            if (e.getCause().getMessage().contains("BUSYGROUP")) {
                 log.info("Consumer group exists.");
+                return;
             }
             log.error("Error ensuring stream creation", e);
         }

@@ -123,7 +123,7 @@ class ConsumerApplicationTests {
             redisTemplate.opsForStream().add(processedStreamKey, Map.of("init", "true"));
             redisTemplate.opsForStream().createGroup(processedStreamKey, ReadOffset.from("0"), CONSUMER_NAME);
         } catch (RedisSystemException e) {
-            if (!e.getMessage().contains("BUSYGROUP")) {
+            if (e.getCause().getMessage().contains("BUSYGROUP")) {
                 System.out.println("Consumer group exists.");
             }
             System.out.println("Error ensuring stream creation" + e);
